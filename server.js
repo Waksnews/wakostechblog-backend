@@ -26,7 +26,16 @@ connectDB();
 const app = express();
 
 //middlewares
-app.use(cors());
+// CORS configuration
+app.use(cors({
+  origin: [
+    'https://wakostech-blog-frontend.onrender.com', // Your Render frontend URL
+    'http://localhost:3000' // For local development
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use(morgan("dev"));
 
