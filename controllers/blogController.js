@@ -793,7 +793,7 @@ exports.uploadEditorImageController = async (req, res) => {
 
     // Construct the full URL for the uploaded image
     const imageUrl = `/uploads/${req.file.filename}`;
-    const fullImageUrl = `${req.protocol}://${req.get('host')}${imageUrl}`;
+    const fullImageUrl = getFullImageUrl(imageUrl);
 
     console.log("Editor image uploaded successfully:", imageUrl);
 
@@ -841,7 +841,7 @@ function calculateReadingTime(description) {
   return Math.max(1, readingTime); // At least 1 min
 }
 
-// Ensure image URL is full URL
+// Ensure image URL is full URL - FIXED FOR PRODUCTION
 function getFullImageUrl(imagePath) {
   if (!imagePath) return '';
   
@@ -855,14 +855,19 @@ function getFullImageUrl(imagePath) {
     return imagePath;
   }
   
-  // If it's a relative path, make sure it starts with /uploads
+  // For production, return full backend URL
+  if (process.env.NODE_ENV === 'production') {
+    return `https://wakostechblog-backend.onrender.com${imagePath}`;
+  }
+  
+  // For development, use relative path (localhost)
   if (imagePath.startsWith('/uploads')) {
-    return imagePath;
+    return `http://localhost:5000${imagePath}`;
   }
   
   // If it's just a filename, prepend /uploads/
   if (!imagePath.startsWith('/')) {
-    return `/uploads/${imagePath}`;
+    return `http://localhost:5000/uploads/${imagePath}`;
   }
   
   return imagePath;
