@@ -68,41 +68,31 @@ app.get("/api/v1/health", (req, res) => {
   });
 });
 
-// Serve static files for production (React build)
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "./client/build")));
-
-  // Serve React app for all other routes
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "./client/build/index.html"));
+// Root route - works for both development and production
+app.get("/", (req, res) => {
+  res.status(200).send({
+    success: true,
+    message: "Welcome to MERN Stack Blog App API",
+    version: "1.0.0",
+    environment: process.env.NODE_ENV || "development",
+    endpoints: {
+      users: "/api/v1/user",
+      blogs: "/api/v1/blog",
+      comments: "/api/v1/comments",
+      newsletter: "/api/v1/newsletter",
+      dashboard: "/api/v1/dashboard",
+      // NEW: Added profile endpoint
+      profile: "/api/v1/profile",
+      health: "/api/v1/health"
+    },
+    // NEW: Enhanced features info
+    enhancedFeatures: {
+      profile: "User profiles with social links, bio, and preferences",
+      dashboard: "Advanced analytics and content calendar",
+      analytics: "Engagement metrics and performance tracking"
+    }
   });
-} else {
-  // Development route
-  app.get("/", (req, res) => {
-    res.status(200).send({
-      success: true,
-      message: "Welcome to MERN Stack Blog App API",
-      version: "1.0.0",
-      environment: process.env.DEV_MODE || "development",
-      endpoints: {
-        users: "/api/v1/user",
-        blogs: "/api/v1/blog",
-        comments: "/api/v1/comments",
-        newsletter: "/api/v1/newsletter",
-        dashboard: "/api/v1/dashboard",
-        // NEW: Added profile endpoint
-        profile: "/api/v1/profile",
-        health: "/api/v1/health"
-      },
-      // NEW: Enhanced features info
-      enhancedFeatures: {
-        profile: "User profiles with social links, bio, and preferences",
-        dashboard: "Advanced analytics and content calendar",
-        analytics: "Engagement metrics and performance tracking"
-      }
-    });
-  });
-}
+});
 
 // Error handling middleware for undefined routes
 app.use("*", (req, res) => {
