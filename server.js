@@ -51,7 +51,19 @@ app.use("/api/v1/dashboard", dashboardRoutes);
 // NEW: Add profile routes
 app.use("/api/v1/profile", profileRoutes);
 app.use("/", sitemapRoutes); // For sitemap.xml and robots.txt
-
+// TEMPORARY DEBUG ROUTE - Add this
+app.get("/api/v1/debug-routes", (req, res) => {
+  const routes = [
+    { path: '/api/v1/user/login', method: 'POST', mounted: true },
+    { path: '/api/v1/user/register', method: 'POST', mounted: true },
+    { path: '/api/v1/user/all-users', method: 'GET', mounted: true }
+  ];
+  res.json({ 
+    message: "Debug routes check",
+    userRoutes: routes,
+    allEndpoints: ["/api/v1/user/login", "/api/v1/user/register", "/api/v1/user/all-users"]
+  });
+});
 // Health check route
 app.get("/api/v1/health", (req, res) => {
   res.status(200).json({
