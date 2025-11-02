@@ -1,6 +1,7 @@
 {
   "name": "blog-app",
   "version": "1.0.0",
+  "type": "module",
   "description": "MERN stack blog application",
   "main": "server.js",
   "scripts": {
