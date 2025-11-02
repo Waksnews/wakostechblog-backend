@@ -16,7 +16,6 @@ const commentRoutes = require("./routes/commentRoutes");
 const newsletterRoutes = require("./routes/newsletterRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const sitemapRoutes = require("./routes/sitemapRoutes");
-// NEW: Import profile routes
 const profileRoutes = require("./routes/profileRoutes");
 
 //mongodb connection
@@ -26,32 +25,35 @@ connectDB();
 const app = express();
 
 //middlewares
-// CORS configuration
+// CORS configuration - UPDATED for Vercel deployment
 app.use(cors({
   origin: [
-    'https://wakostech-blog-frontend.onrender.com', // Your Render frontend URL
-    'http://localhost:3000' // For local development
+    'https://wakostech-blog-frontend.vercel.app', // Your Vercel frontend URL
+    'http://localhost:3000', // For local development
+    'https://wakostech-blog-frontend-git-main-wako-roba.vercel.app' // Vercel preview deployments
   ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
-app.use(express.json());
-app.use(morgan("dev"));
 
-// Serve static files from uploads directory - ADD THIS LINE
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(morgan("combined"));
+
+// Serve static files from uploads directory
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-//routes
+// Routes
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/blog", blogRoutes);
 app.use("/api/v1/comments", commentRoutes);
 app.use("/api/v1/newsletter", newsletterRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
-// NEW: Add profile routes
 app.use("/api/v1/profile", profileRoutes);
-app.use("/", sitemapRoutes); // For sitemap.xml and robots.txt
-// TEMPORARY DEBUG ROUTE - Add this
+app.use("/", sitemapRoutes);
+
+// Debug route
 app.get("/api/v1/debug-routes", (req, res) => {
   const routes = [
     { path: '/api/v1/user/login', method: 'POST', mounted: true },
@@ -64,14 +66,17 @@ app.get("/api/v1/debug-routes", (req, res) => {
     allEndpoints: ["/api/v1/user/login", "/api/v1/user/register", "/api/v1/user/all-users"]
   });
 });
-// Health check route
+
+// Health check route - IMPORTANT for Railway
 app.get("/api/v1/health", (req, res) => {
   res.status(200).json({
     success: true,
     message: "Server is running healthy",
     timestamp: new Date().toISOString(),
-    environment: process.env.DEV_MODE || "development",
-    // NEW: Added enhanced features status
+    environment: process.env.NODE_ENV || "development",
+    version: "1.0.0",
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
     features: {
       profile: "enhanced",
       dashboard: "enhanced",
@@ -80,29 +85,24 @@ app.get("/api/v1/health", (req, res) => {
   });
 });
 
-// Root route - works for both development and production
+// Root route
 app.get("/", (req, res) => {
   res.status(200).send({
     success: true,
-    message: "Welcome to MERN Stack Blog App API",
+    message: "Welcome to WakosTech Blog App API",
     version: "1.0.0",
     environment: process.env.NODE_ENV || "development",
+    deployed: true,
     endpoints: {
       users: "/api/v1/user",
       blogs: "/api/v1/blog",
       comments: "/api/v1/comments",
       newsletter: "/api/v1/newsletter",
       dashboard: "/api/v1/dashboard",
-      // NEW: Added profile endpoint
       profile: "/api/v1/profile",
       health: "/api/v1/health"
     },
-    // NEW: Enhanced features info
-    enhancedFeatures: {
-      profile: "User profiles with social links, bio, and preferences",
-      dashboard: "Advanced analytics and content calendar",
-      analytics: "Engagement metrics and performance tracking"
-    }
+    documentation: "API documentation available at root endpoint"
   });
 });
 
@@ -112,7 +112,6 @@ app.use("*", (req, res) => {
     success: false,
     message: "Route not found",
     requestedUrl: req.originalUrl,
-    // NEW: Suggest available endpoints
     availableEndpoints: [
       "/api/v1/user",
       "/api/v1/blog", 
@@ -127,54 +126,53 @@ app.use("*", (req, res) => {
 
 // Global error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Error Stack:', err.stack);
 
-  // Check if headers have already been sent
   if (res.headersSent) {
     return next(err);
   }
 
-  res.status(err.status || 500).json({
+  // Default to 500 if no status code
+  const statusCode = err.status || 500;
+  
+  res.status(statusCode).json({
     success: false,
     message: err.message || "Internal Server Error",
-    ...(process.env.DEV_MODE === "development" && { stack: err.stack })
+    ...(process.env.NODE_ENV === "development" && { 
+      stack: err.stack,
+      error: err 
+    })
   });
 });
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err, promise) => {
-  console.log(`Error: ${err.message}`.red);
-  // Close server & exit process
-  server.close(() => {
-    process.exit(1);
-  });
+  console.log(`Unhandled Rejection: ${err.message}`.red);
+  console.log(err.stack);
 });
 
 // Handle uncaught exceptions
 process.on("uncaughtException", (err) => {
-  console.log(`Error: ${err.message}`.red);
+  console.log(`Uncaught Exception: ${err.message}`.red);
+  console.log(err.stack);
   process.exit(1);
 });
 
-// Port
+// Port - Railway will provide PORT environment variable
 const PORT = process.env.PORT || 8080;
 
 // Start server
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(
-    `\n🚀 Server Running on ${process.env.DEV_MODE} mode on port ${PORT}`.bgCyan.white
+    `\n🚀 Server Running in ${process.env.NODE_ENV || "development"} mode on port ${PORT}`.bgCyan.white
   );
-  console.log(`📁 Static files served from: ${path.join(__dirname, "uploads")}`.gray);
   console.log(`🌐 Environment: ${process.env.NODE_ENV || "development"}`.gray);
-  console.log(`🗄️ Database: ${process.env.MONGO_URL ? "Connected" : "Not configured"}`.gray);
+  console.log(`📊 Database: ${process.env.MONGO_URL ? "Connected" : "Not configured"}`.gray);
   console.log(`⏰ Started at: ${new Date().toLocaleString()}`.gray);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/v1/health`.gray);
-  console.log(`📚 API Documentation available at root endpoint`.gray);
-  // NEW: Enhanced features announcement
   console.log(`✨ Enhanced Features:`.green);
   console.log(`   👤 User Profiles with social links & preferences`.green);
   console.log(`   📊 Advanced Dashboard with analytics`.green);
-  console.log(`   📅 Content Calendar & engagement metrics`.green);
 });
 
 // Graceful shutdown
